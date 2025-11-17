@@ -1,7 +1,11 @@
 // index.js
 import "dotenv/config";
 import { Telegraf } from "telegraf";
-import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import {
+  Connection,
+  PublicKey,
+  LAMPORTS_PER_SOL
+} from "@solana/web3.js";
 
 import { createAndStoreWallet, getUserRecord } from "./services/wallet.js";
 import { getSolPrice, getTokenPrice, isMint } from "./services/price.js";
@@ -14,19 +18,22 @@ const conn = new Connection(RPC, "confirmed");
 
 const bot = new Telegraf(BOT_TOKEN);
 
+// ---------------------------------------------
 // /start
+// ---------------------------------------------
 bot.start((ctx) => {
   ctx.reply(
-    "Welcome to your wallet bot! 🔥\n\n" +
+    "Welcome to your Solana Wallet Bot.\n\n" +
       "Commands:\n" +
-      "/createwallet\n" +
-      "/balance\n" +
-      "/price SOL\n" +
-      "/price <token_mint>"
+      "/createwallet - generate a new wallet\n" +
+      "/balance - check SOL balance\n" +
+      "/price <SOL|CA> - get price of SOL or any token"
   );
 });
 
+// ---------------------------------------------
 // /createwallet
+// ---------------------------------------------
 bot.command("createwallet", async (ctx) => {
   try {
     const tgId = ctx.from.id;
@@ -34,71 +41,102 @@ bot.command("createwallet", async (ctx) => {
 
     if (existing) {
       return ctx.reply(
-        You already have a wallet:\n${existing.public_key}\n\nUse /balance to check SOL balance.
+        You already have a wallet.\n\n +
+        Public Key:\n${existing.public_key}\n\n +
+        Use /balance to check your balance.
       );
     }
 
     const result = await createAndStoreWallet(tgId);
+
     return ctx.reply(
-      ✅ Wallet created!\n\nYour public key:\n${result.publicKey}
+      Wallet created.\n\nYour public key:\n${result.publicKey}\n\nPlease store it safely.
     );
   } catch (err) {
-    console.error(err);
-    return ctx.reply("❌ Error creating wallet.");
+    console.error("Create wallet error:", err);
+    return ctx.reply("Error creating wallet.");
   }
 });
 
+// ---------------------------------------------
 // /balance
+// ---------------------------------------------
 bot.command("balance", async (ctx) => {
   try {
     const tgId = ctx.from.id;
     const row = await getUserRecord(tgId);
 
-    if (!row) return ctx.reply("❌ No wallet found. Use /createwallet");
+    if (!row) {
+      return ctx.reply("You do not have a wallet. Use /createwallet");
+    }
 
     const pubkey = new PublicKey(row.public_key);
     const lamports = await conn.getBalance(pubkey);
     const sol = lamports / LAMPORTS_PER_SOL;
 
-    return ctx.reply(`💰 Balance\nAddress:\n${row.public_key}\nSOL: ${sol}`);
+    return ctx.reply(
+      Balance Information:\n\n +
+      Address: ${row.public_key}\n +
+      SOL: ${sol}
+    );
   } catch (err) {
-    console.error(err);
-    return ctx.reply("❌ Error fetching balance.");
+    console.error("Balance error:", err);
+    return ctx.reply("Error fetching balance.");
   }
 });
 
-// /price
+// ---------------------------------------------
+// /price <SOL|CA>
+// ---------------------------------------------
 bot.command("price", async (ctx) => {
   try {
-    const parts = ctx.message.text.trim().split(" ");
+    const text = ctx.message.text.trim();
+    const parts = text.split(" ");
+
+    if (parts.length < 2) {
+      return ctx.reply("Usage:\n/price SOL\n/price <token_mint>");
+    }
+
     const query = parts[1];
 
-    if (!query)
-      return ctx.reply("Usage:\n/price SOL\n/price <token_mint>");
-
+    // SOL price
     if (/^sol$/i.test(query)) {
       const price = await getSolPrice();
-      if (!price) return ctx.reply("❌ Could not fetch SOL price.");
-      return ctx.reply(`💸 SOL Price: $${price}`);
+      return ctx.reply(`SOL Price: $${price}`);
     }
 
+    // Token price
     if (isMint(query)) {
       const price = await getTokenPrice(query);
-      if (!price) return ctx.reply("❌ Token price not found.");
-      return ctx.reply(`💠 Token Price\nMint: ${query}\nUSD: $${price}`);
+
+      if (!price) return ctx.reply("Price not found for this token.");
+
+      return ctx.reply(
+        Token Price:\nMint: ${query}\nUSD: $${price}
+      );
     }
 
-    return ctx.reply("❌ Invalid token or mint.");
+    return ctx.reply("Invalid token or mint address.");
   } catch (err) {
-    console.error(err);
-    return ctx.reply("❌ Error fetching price.");
+    console.error("Price error:", err);
+    return ctx.reply("Error fetching price.");
   }
 });
 
-// Unknown messages
-bot.on("message", (ctx) => ctx.reply("Unknown command. Use /start"));
+// ---------------------------------------------
+// Fallback for unknown messages
+// ---------------------------------------------
+bot.on("message", async (ctx) => {
+  ctx.reply("Unknown command. Use /start.");
+});
 
-// Launch bot
-bot.launch().then(() => console.log("🚀 Bot running"));
+// ---------------------------------------------
+// Start bot
+// ---------------------------------------------
+bot.launch().then(() => {
+  console.log("Bot started successfully.");
+});
+
+// Graceful stop
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
