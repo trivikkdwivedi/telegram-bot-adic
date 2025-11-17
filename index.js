@@ -41,13 +41,15 @@ bot.command("createwallet", async (ctx) => {
 
     if (existing) {
       return ctx.reply(
-        You already have a wallet:\n${existing.public_key}\n\nUse /balance to check SOL balance.
+        ⚠️ You already have a wallet.\n\n +
+        Public Key:\n${existing.public_key}\n\n +
+        Use /balance to check SOL balance.
       );
     }
 
     const result = await createAndStoreWallet(tgId);
     return ctx.reply(
-      ✅ Wallet created!\n\nYour public key:\n\`${result.publicKey}\`\n\nSave it safely.,
+      ✅ Wallet created!\n\nYour public key:\n${result.publicKey}\n\nSave it safely.,
       { parse_mode: "Markdown" }
     );
   } catch (err) {
@@ -71,7 +73,7 @@ bot.command("balance", async (ctx) => {
     const sol = lamports / LAMPORTS_PER_SOL;
 
     return ctx.reply(
-      💰 *Balance*\nAddress:\`${row.public_key}\`\nSOL: *${sol}*,
+      💰 *Balance*\nAddress: ${row.public_key}\nSOL: *${sol}*,
       { parse_mode: "Markdown" }
     );
   } catch (err) {
@@ -103,7 +105,9 @@ bot.command("price", async (ctx) => {
     if (isMint(query)) {
       const p = await getTokenPrice(query);
       if (!p) return ctx.reply("❌ Could not fetch price for that token.");
-      return ctx.reply(`💠 Token Price\nMint: ${query}\nUSD: $${p}`);
+      return ctx.reply(
+        💠 Token Price\nMint: ${query}\nUSD: $${p}
+      );
     }
 
     return ctx.reply("❌ Invalid token or mint address.");
