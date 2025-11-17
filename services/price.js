@@ -1,42 +1,54 @@
-import fetch from "node-fetch";
+// services/price.js
+import "dotenv/config";
 
 const API = "https://public-api.birdeye.so";
+const KEY = process.env.BIRDEYE_API_KEY;
 
-// Validate mint address
-export function isMint(str) {
-  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(str);
-}
-
-// Fetch SOL price
+// --- Fetch SOL price ---
 export async function getSolPrice() {
-  const url = ${API}/defi/price?chain=solana&address=So11111111111111111111111111111111111111112;
+  try {
+    const url = `${API}/defi/price?address=So11111111111111111111111111111111111111112`;
 
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      accept: "application/json",
-      "x-chain": "solana",
-      "x-referrer": "celesto_bot"
-    }
-  });
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+        "x-chain": "solana",
+        "X-API-KEY": KEY,
+      },
+    });
 
-  const json = await res.json();
-  return json?.data?.value || null;
+    const data = await res.json();
+    return data?.data?.value || null;
+  } catch (err) {
+    console.error("SOL PRICE ERROR:", err);
+    return null;
+  }
 }
 
-// Fetch SPL token price by mint
+// --- Fetch ANY token price ---
 export async function getTokenPrice(mint) {
-  const url = ${API}/defi/price?chain=solana&address=${mint};
+  try {
+    const url = `${API}/defi/price?address=${mint}`;
 
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      accept: "application/json",
-      "x-chain": "solana",
-      "x-referrer": "celesto_bot"
-    }
-  });
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+        "x-chain": "solana",
+        "X-API-KEY": KEY,
+      },
+    });
 
-  const json = await res.json();
-  return json?.data?.value || null;
+    const data = await res.json();
+    return data?.data?.value || null;
+  } catch (err) {
+    console.error("TOKEN PRICE ERROR:", err);
+    return null;
+  }
+}
+
+// --- Mint validation ---
+export function isMint(s) {
+  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(s);
 }
