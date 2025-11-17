@@ -1,44 +1,41 @@
-// services/price.js
+import fetch from "node-fetch";
 
-const BIRDEYE_API_KEY = process.env.BIRDEYE_API_KEY;
+// BirdEye API Base
+const API = "https://public-api.birdeye.so";
 
-// Check if the string looks like a Solana mint
-export function isMint(s) {
-  return /^[A-Za-z0-9]{32,60}$/.test(s);
+// Only SOL or SPL tokens allowed
+export function isMint(str) {
+  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(str);
 }
 
-// Fetch SOL price fallback (CoinGecko)
+// --- Fetch SOL price ---
 export async function getSolPrice() {
-  try {
-    const r = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd");
-    const j = await r.json();
-    return j.solana.usd;
-  } catch (_) {
-    return null;
-  }
-}
-
-// Fetch price for ANY SPL token using Birdeye
-export async function getTokenPrice(mint) {
-  if (!BIRDEYE_API_KEY) throw new Error("Missing BIRDEYE_API_KEY");
-
-  const url = https://public-api.birdeye.so/defi/price?chain=solana&mint=${mint};
+  const url = `${API}/defi/price?chain=solana&address=So11111111111111111111111111111111111111112`;
 
   const res = await fetch(url, {
     method: "GET",
     headers: {
       accept: "application/json",
-      "x-api-key": BIRDEYE_API_KEY
-    }
+      "x-chain": "solana",
+    },
   });
 
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(`Birdeye error: ${res.status} ${t}`);
-  }
+  const data = await res.json();
+  return data.data?.value || null;
+}
+
+// --- Fetch SPL Token price ---
+export async function getTokenPrice(mint) {
+  const url = `${API}/defi/price?chain=solana&address=${mint}`;
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      accept: "application/json",
+      "x-chain": "solana",
+    },
+  });
 
   const data = await res.json();
-
-  // Birdeye price usually in: data.price or data.data.price
-  return data.data?.price ?? data.price ?? null;
+  return data.data?.value || null;
 }
