@@ -18,22 +18,18 @@ const conn = new Connection(RPC, "confirmed");
 
 const bot = new Telegraf(BOT_TOKEN);
 
-// ---------------------------------------------
 // /start
-// ---------------------------------------------
 bot.start((ctx) => {
   ctx.reply(
-    "Welcome to the trading bot.\n\n" +
+    "Welcome.\n\n" +
     "Commands:\n" +
-    "/createwallet - generate a Solana wallet\n" +
-    "/balance - check wallet balance\n" +
-    "/price <SOL|mint> - get token price"
+    "/createwallet - create wallet\n" +
+    "/balance - check balance\n" +
+    "/price <SOL|mint> - get price"
   );
 });
 
-// ---------------------------------------------
 // /createwallet
-// ---------------------------------------------
 bot.command("createwallet", async (ctx) => {
   try {
     const tgId = ctx.from.id;
@@ -41,9 +37,7 @@ bot.command("createwallet", async (ctx) => {
 
     if (existing) {
       return ctx.reply(
-        "You already have a wallet.\n\n" +
-        `Public Key:\n${existing.public_key}\n\n` +
-        "Use /balance to check SOL balance."
+        `You already have a wallet.\n\nPublic Key:\n${existing.public_key}\n\nUse /balance to check SOL balance.`
       );
     }
 
@@ -58,9 +52,7 @@ bot.command("createwallet", async (ctx) => {
   }
 });
 
-// ---------------------------------------------
 // /balance
-// ---------------------------------------------
 bot.command("balance", async (ctx) => {
   try {
     const tgId = ctx.from.id;
@@ -73,7 +65,7 @@ bot.command("balance", async (ctx) => {
     const sol = lamports / LAMPORTS_PER_SOL;
 
     return ctx.reply(
-      `Wallet Balance:\nAddress: ${row.public_key}\nSOL: ${sol}`
+      `Balance:\nAddress: ${row.public_key}\nSOL: ${sol}`
     );
 
   } catch (err) {
@@ -82,31 +74,26 @@ bot.command("balance", async (ctx) => {
   }
 });
 
-// ---------------------------------------------
-// /price <SOL|mint>
-// ---------------------------------------------
+// /price
 bot.command("price", async (ctx) => {
   try {
-    const parts = ctx.message.text.trim().split(" ");
+    const text = ctx.message.text.trim();
+    const parts = text.split(" ");
 
     if (parts.length < 2)
       return ctx.reply("Usage:\n/price SOL\n/price <token_mint>");
 
     const query = parts[1];
 
-    // SOL
     if (/^sol$/i.test(query)) {
       const p = await getSolPrice();
       return ctx.reply(`SOL Price: $${p}`);
     }
 
-    // SPL token
     if (isMint(query)) {
       const p = await getTokenPrice(query);
       if (!p) return ctx.reply("Could not fetch token price.");
-      return ctx.reply(
-        `Token Price:\nMint: ${query}\nUSD: $${p}`
-      );
+      return ctx.reply(`Token Price:\nMint: ${query}\nUSD: $${p}`);
     }
 
     return ctx.reply("Invalid token or mint.");
@@ -117,20 +104,12 @@ bot.command("price", async (ctx) => {
   }
 });
 
-// ---------------------------------------------
-// Unknown messages
-// ---------------------------------------------
-bot.on("message", async (ctx) => {
+// fallback
+bot.on("message", (ctx) => {
   ctx.reply("Unknown command. Use /start.");
 });
 
-// ---------------------------------------------
-// Launch bot
-// ---------------------------------------------
-bot.launch().then(() => {
-  console.log("Bot started.");
-});
-
-// Graceful stop
+// launch
+bot.launch().then(() => console.log("Bot started."));
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
