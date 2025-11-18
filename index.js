@@ -23,11 +23,11 @@ const bot = new Telegraf(BOT_TOKEN);
 // ---------------------------------------------
 bot.start((ctx) => {
   ctx.reply(
-    "Welcome to your Solana Wallet Bot.\n\n" +
-      "Commands:\n" +
-      "/createwallet - generate a new wallet\n" +
-      "/balance - check SOL balance\n" +
-      "/price <SOL|CA> - get price of SOL or any token"
+    "Welcome to the trading bot.\n\n" +
+    "Commands:\n" +
+    "/createwallet - generate a Solana wallet\n" +
+    "/balance - check wallet balance\n" +
+    "/price <SOL|mint> - get token price"
   );
 });
 
@@ -41,17 +41,17 @@ bot.command("createwallet", async (ctx) => {
 
     if (existing) {
       return ctx.reply(
-        You already have a wallet.\n\n +
-        Public Key:\n${existing.public_key}\n\n +
-        Use /balance to check your balance.
+        "You already have a wallet.\n\n" +
+        `Public Key:\n${existing.public_key}\n\n` +
+        "Use /balance to check SOL balance."
       );
     }
 
     const result = await createAndStoreWallet(tgId);
-
     return ctx.reply(
-      Wallet created.\n\nYour public key:\n${result.publicKey}\n\nPlease store it safely.
+      `Wallet created.\n\nYour public key:\n${result.publicKey}`
     );
+
   } catch (err) {
     console.error("Create wallet error:", err);
     return ctx.reply("Error creating wallet.");
@@ -66,19 +66,16 @@ bot.command("balance", async (ctx) => {
     const tgId = ctx.from.id;
     const row = await getUserRecord(tgId);
 
-    if (!row) {
-      return ctx.reply("You do not have a wallet. Use /createwallet");
-    }
+    if (!row) return ctx.reply("You don't have a wallet. Use /createwallet");
 
     const pubkey = new PublicKey(row.public_key);
     const lamports = await conn.getBalance(pubkey);
     const sol = lamports / LAMPORTS_PER_SOL;
 
     return ctx.reply(
-      Balance Information:\n\n +
-      Address: ${row.public_key}\n +
-      SOL: ${sol}
+      `Wallet Balance:\nAddress: ${row.public_key}\nSOL: ${sol}`
     );
+
   } catch (err) {
     console.error("Balance error:", err);
     return ctx.reply("Error fetching balance.");
@@ -86,37 +83,34 @@ bot.command("balance", async (ctx) => {
 });
 
 // ---------------------------------------------
-// /price <SOL|CA>
+// /price <SOL|mint>
 // ---------------------------------------------
 bot.command("price", async (ctx) => {
   try {
-    const text = ctx.message.text.trim();
-    const parts = text.split(" ");
+    const parts = ctx.message.text.trim().split(" ");
 
-    if (parts.length < 2) {
+    if (parts.length < 2)
       return ctx.reply("Usage:\n/price SOL\n/price <token_mint>");
-    }
 
     const query = parts[1];
 
-    // SOL price
+    // SOL
     if (/^sol$/i.test(query)) {
-      const price = await getSolPrice();
-      return ctx.reply(`SOL Price: $${price}`);
+      const p = await getSolPrice();
+      return ctx.reply(`SOL Price: $${p}`);
     }
 
-    // Token price
+    // SPL token
     if (isMint(query)) {
-      const price = await getTokenPrice(query);
-
-      if (!price) return ctx.reply("Price not found for this token.");
-
+      const p = await getTokenPrice(query);
+      if (!p) return ctx.reply("Could not fetch token price.");
       return ctx.reply(
-        Token Price:\nMint: ${query}\nUSD: $${price}
+        `Token Price:\nMint: ${query}\nUSD: $${p}`
       );
     }
 
-    return ctx.reply("Invalid token or mint address.");
+    return ctx.reply("Invalid token or mint.");
+
   } catch (err) {
     console.error("Price error:", err);
     return ctx.reply("Error fetching price.");
@@ -124,17 +118,17 @@ bot.command("price", async (ctx) => {
 });
 
 // ---------------------------------------------
-// Fallback for unknown messages
+// Unknown messages
 // ---------------------------------------------
 bot.on("message", async (ctx) => {
   ctx.reply("Unknown command. Use /start.");
 });
 
 // ---------------------------------------------
-// Start bot
+// Launch bot
 // ---------------------------------------------
 bot.launch().then(() => {
-  console.log("Bot started successfully.");
+  console.log("Bot started.");
 });
 
 // Graceful stop
